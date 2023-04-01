@@ -11,26 +11,19 @@ public:
 
     explicit ArrayPtr(size_t size)
     {
-        if (size == 0)
-        {
-            raw_ptr_ = nullptr;
-
-            return;
-        }
-
-        raw_ptr_ = new Type[size]{};
+        raw_ptr_ = size ? new Type[size]{} : nullptr;
     }
 
     explicit ArrayPtr(Type *raw_ptr) noexcept
+        : raw_ptr_(raw_ptr)
     {
-        raw_ptr_ = raw_ptr;
     }
 
     ArrayPtr(const ArrayPtr &) = delete;
 
     ArrayPtr(ArrayPtr &&other)
+        : raw_ptr_(other.Release())
     {
-        raw_ptr_ = std::exchange(other.raw_ptr_, nullptr);
     }
 
     ~ArrayPtr()
@@ -38,7 +31,6 @@ public:
         delete[] raw_ptr_;
     }
 
-public:
     ArrayPtr &operator=(const ArrayPtr &) = delete;
 
     ArrayPtr &operator=(ArrayPtr &&other)
@@ -48,7 +40,6 @@ public:
         return *this;
     }
 
-public:
     Type &operator[](size_t index) noexcept
     {
         return raw_ptr_[index];
@@ -64,7 +55,6 @@ public:
         return raw_ptr_ ? true : false;
     }
 
-public:
     [[nodiscard]] Type *Release() noexcept
     {
         return std::exchange(raw_ptr_, nullptr);
