@@ -149,11 +149,7 @@ public:
     // ѕри увеличении размера новые элементы получают значение по умолчанию дл€ типа Type
     void Resize(size_t new_size)
     {
-        if (new_size < size_)
-        {
-            size_ = new_size;
-        }
-        else if (new_size <= capacity_)
+        if (new_size <= capacity_)
         {
             std::fill(end(), &items_[capacity_], Type());
             size_ = new_size;
@@ -162,8 +158,8 @@ public:
         {
             Reserve(std::max(new_size, 2 * capacity_));
             std::fill(&items_[size_], &items_[new_size], Type());
-            size_ = new_size;
         }
+        size_ = new_size;
     }
 
     void Reserve(size_t new_capacity)
@@ -180,15 +176,11 @@ public:
     void PushBack(const Type &item)
     {
         size_t number = 1;
-        if (size_ < capacity_)
-        {
-            items_[size_] = item;
-        }
-        else
+        if (size_ >= capacity_)
         {
             Reserve(std::max(number, 2 * capacity_));
-            items_[size_] = item;
         }
+        items_[size_] = item;
         ++size_;
     }
 
@@ -211,69 +203,28 @@ public:
     {
         assert(begin() <= pos && pos <= end());
 
-        size_t n = std::distance(begin(), Iterator(pos));
-        if (capacity_ == 0)
-        {
-            PushBack(value);
-            return begin();
-        }
-        if (size_ < capacity_)
-        {
-            for (size_t i = size_; i > n; --i)
-            {
-                items_[i] = std::move(items_[i - 1]);
-            }
-            items_[n] = value;
-            ++size_;
-            return begin() + n;
-        }
-        else
-        {
-            SimpleVector<Type> new_vec(capacity_ * 2);
-
-            std::copy(begin(), begin() + n, new_vec.begin());
-            std::copy(begin() + n, end(), new_vec.begin() + n + 1);
-            *(new_vec.begin() + n) = value;
-            auto old_size = size_;
-            swap(new_vec);
-            size_ = old_size + 1;
-            return begin() + n;
-        }
+        auto prev_size = size_;
+        auto dist = std::distance(begin(), Iterator(pos));
+        Reserve(size_ + 1);
+        Iterator insert_pos = std::next(begin(), dist);
+        std::copy_backward(insert_pos, end(), end() + 1);
+        *insert_pos = value;
+        ++size_;
+        return insert_pos;
     }
 
     Iterator Insert(ConstIterator pos, Type &&value)
     {
         assert(begin() <= pos && pos <= end());
 
-        size_t n = std::distance(begin(), Iterator(pos));
-        if (capacity_ == 0)
-        {
-            PushBack(std::move(value));
-            return begin();
-        }
-        if (size_ < capacity_)
-        {
-            for (size_t i = size_; i > n; --i)
-            {
-                items_[i] = std::move(items_[i - 1]);
-            }
-            items_[n] = std::move(value);
-
-            ++size_;
-            return begin() + n;
-        }
-        else
-        {
-            SimpleVector<Type> new_vec(capacity_ * 2);
-
-            std::copy(std::make_move_iterator(begin()), std::make_move_iterator(begin() + n), new_vec.begin());
-            std::copy(std::make_move_iterator(begin() + n), std::make_move_iterator(end()), new_vec.begin() + n + 1);
-            *(new_vec.begin() + n) = std::move(value);
-            auto old_size = size_;
-            swap(new_vec);
-            size_ = old_size + 1;
-            return begin() + n;
-        }
+        auto prev_size = size_;
+        auto dist = std::distance(begin(), Iterator(pos));
+        Reserve(size_ + 1);
+        Iterator insert_pos = std::next(begin(), dist);
+        std::move_backward(insert_pos, end(), end() + 1);
+        *insert_pos = std::exchange(value, Type());
+        ++size_;
+        return insert_pos;
     }
 
     void PopBack() noexcept
@@ -285,9 +236,9 @@ public:
     Iterator Erase(ConstIterator position)
     {
         assert(position >= begin() && position < end());
-        std::move(const_cast<Iterator>(position) + 1, end(), const_cast<Iterator>(position));
+        std::move(Iterator(position) + 1, end(), Iterator(position));
         --size_;
-        return const_cast<Iterator>(position);
+        return Iterator(position);
     }
 
     void swap(SimpleVector &other) noexcept

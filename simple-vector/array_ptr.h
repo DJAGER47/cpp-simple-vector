@@ -10,8 +10,8 @@ public:
     ArrayPtr() = default;
 
     explicit ArrayPtr(size_t size)
+        : raw_ptr_(size ? new Type[size]{} : nullptr)
     {
-        raw_ptr_ = size ? new Type[size]{} : nullptr;
     }
 
     explicit ArrayPtr(Type *raw_ptr) noexcept
